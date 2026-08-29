@@ -7,7 +7,7 @@ closing, or continuing.
 
 ## Skills
 
-- `skills/productivity/spoolis-outcome-gate`: verify a claimed result against
+- `skills/spoolis-outcome-gate`: verify a claimed result against
   agreed acceptance criteria through the keyless Spoolis sandbox and act on
   the signed Outcome. Reports per-condition verdicts, accepted and rejected
   units, and earned value. Never collapses an Outcome to pass/fail.
