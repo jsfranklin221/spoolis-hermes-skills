@@ -68,22 +68,15 @@ class OutcomeTests(unittest.TestCase):
             "evidence": {"type": "dataset", "rows": [{"id": 1}, {}], "provenance": "uploaded_json"},
         }
 
-    def test_constructs_exact_compile_and_verify_payloads(self):
-        compile_body = outcome.compile_payload(self.source)
-        self.assertEqual(compile_body, {
-            "source": "Verify this result against the supplied acceptance criteria for $1.00.",
-            "conditions": [{"description": "Every row includes id", "required": True, "verification_method": "deterministic", "deterministic_check": {"checker": "completeness", "required_fields": ["id"]}}],
-            "economics": {"unitization": {"total_units": 2, "unit_amount_cents": 50}},
-        })
+    def test_constructs_exact_verify_payload(self):
         self.assertEqual(outcome.verify_payload(self.source), {**self.source, "settlement": "external"})
         with self.assertRaisesRegex(outcome.OutcomeError, "external only"):
             outcome.verify_payload({**self.source, "settlement": "managed"})
 
-    def test_verify_mints_compiles_then_verifies_with_bearer_token(self):
+    def test_verify_mints_then_verifies_with_bearer_token(self):
         receipt = make_receipt()
         opener = FakeOpener([
             {"token": "sandbox-token", "expires_at": "later", "limits": {}},
-            {"status": "compiled", "spool": {"id": "spl_draft"}},
             {"spool_id": "spl_verified", "accepted": 1, "rejected": 1, "earned_cents": 50, "receipt": receipt, "receipt_url": "https://spoolis.com/r/" + receipt["id"], "rejections": [{"unit": 2, "reason": "missing id"}]},
         ])
         with tempfile.TemporaryDirectory() as directory:
@@ -92,12 +85,11 @@ class OutcomeTests(unittest.TestCase):
             result = outcome.run_verify(input_path, opener=opener)
         self.assertEqual([request.full_url for request in opener.requests], [
             "https://spoolis.com/api/sandbox/session",
-            "https://spoolis.com/api/sandbox/compile",
             "https://spoolis.com/api/sandbox/verify",
         ])
         self.assertNotIn("Authorization", opener.requests[0].headers)
         self.assertEqual(opener.requests[1].headers["Authorization"], "Bearer sandbox-token")
-        self.assertEqual(json.loads(opener.requests[2].data), {**self.source, "settlement": "external"})
+        self.assertEqual(json.loads(opener.requests[1].data), {**self.source, "settlement": "external"})
         self.assertEqual(result["receipt"], receipt)
 
     def test_digest_check_detects_tampering(self):

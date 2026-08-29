@@ -50,7 +50,19 @@ Verify a claimed result before taking a consequential downstream action. Preserv
 }
 ```
 
-Use explicit condition objects with the bundled helper. The sandbox API also supports a recipe reference, but the helper requires explicit criteria because it compiles the same criteria before verification.
+Use explicit condition objects with the bundled helper. The sandbox API also supports a recipe reference; the helper requires explicit criteria. Each checker takes exactly these parameters (no others):
+
+| Checker | Parameters |
+| --- | --- |
+| `row_count` | `expected` (non-negative integer) |
+| `completeness` | `required_fields` (non-empty string array) |
+| `duplicate_rate` | `key` (string), `maximum` (0 to 1) |
+| `url_format` | `field` (string) |
+| `json_path` | `path` (string), `expected` (string, number, or boolean), `operator` (`eq`, `gte`, `lte`, `contains`) |
+| `http_status` | `url`, `expected_status` (100 to 599), optional `timeout_ms` (max 5000) |
+| `text_contains` | `needle` (string), optional `case_sensitive`, optional `field` |
+| `hash_matches` | `algorithm` (`sha256`), `expected` (64 hex chars) |
+| `deadline_met` | `due_at` (ISO 8601 datetime) |
 
 ## Procedure
 
@@ -88,7 +100,7 @@ python3 scripts/outcome.py check outcome.json
 Confirm all of the following before using the Outcome as a gate:
 
 - The command returned a signed `spoolis/outcome-receipt@1` receipt.
-- The input criteria match the criteria agreed before evidence inspection, and the receipt reports one result for each compiled condition.
+- The input criteria match the criteria agreed before evidence inspection, and the receipt reports one result for each submitted condition.
 - Every condition result and reason was reported.
 - Accepted plus rejected units equals total units when unitization is present.
 - Earned value matches the accepted units and agreed unit amount.

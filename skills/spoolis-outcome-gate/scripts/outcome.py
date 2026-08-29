@@ -102,33 +102,6 @@ def request_json(opener, method, url, payload=None, token=None):
     return result
 
 
-def compile_payload(source_input):
-    conditions = source_input.get("conditions")
-    if not isinstance(conditions, list) or not conditions:
-        raise OutcomeError("verify requires a non-empty conditions array so the same criteria can be compiled first.")
-    compile_conditions = []
-    for condition in conditions:
-        if not isinstance(condition, dict) or set(condition) != {"description", "deterministic_check"}:
-            raise OutcomeError("Each condition must contain exactly description and deterministic_check.")
-        compile_conditions.append({
-            "description": condition["description"],
-            "required": True,
-            "verification_method": "deterministic",
-            "deterministic_check": condition["deterministic_check"],
-        })
-    amount = source_input.get("max_amount_cents")
-    if amount is None:
-        source = "Verify this result against the supplied acceptance criteria for $0.01."
-    elif isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0:
-        raise OutcomeError("max_amount_cents must be a positive integer when present.")
-    else:
-        source = "Verify this result against the supplied acceptance criteria for $%d.%02d." % divmod(amount, 100)
-    payload = {"source": source, "conditions": compile_conditions}
-    if "unit" in source_input:
-        payload["economics"] = {"unitization": source_input["unit"]}
-    return payload
-
-
 def verify_payload(source_input):
     allowed = {"conditions", "max_amount_cents", "unit", "evidence", "settlement", "idempotency_key"}
     extra = set(source_input) - allowed
@@ -154,7 +127,6 @@ def run_verify(input_path, output_path=None, base_url=BASE_URL, opener=None):
     token = session.get("token") if isinstance(session, dict) else None
     if not token:
         raise OutcomeError("Sandbox session response is missing token.")
-    request_json(opener, "POST", base_url + "/api/sandbox/compile", compile_payload(source_input), token)
     outcome = request_json(opener, "POST", base_url + "/api/sandbox/verify", verify_payload(source_input), token)
     receipt = outcome.get("receipt") if isinstance(outcome, dict) else None
     if not isinstance(receipt, dict):
@@ -218,7 +190,7 @@ def load_outcome(path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
-    verify_parser = subparsers.add_parser("verify", help="compile and verify criteria plus evidence")
+    verify_parser = subparsers.add_parser("verify", help="verify criteria plus evidence in one call")
     verify_parser.add_argument("input", help="criteria and evidence JSON file")
     verify_parser.add_argument("--output", help="write the complete Outcome response to this file")
     verify_parser.add_argument("--base-url", default=BASE_URL, help=argparse.SUPPRESS)
